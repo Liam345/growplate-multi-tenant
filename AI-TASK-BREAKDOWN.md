@@ -13,13 +13,13 @@ This document provides detailed, atomic tasks that can be implemented asynchrono
 
 ## Phase 1: Foundation & Tenant Management
 
-### 🏗️ TASK-001: Initialize Next.js Project Structure
+### 🏗️ TASK-001: Initialize Remix Project Structure
 **Complexity**: Low | **Estimated Time**: 30 min | **Dependencies**: None
 
-**Description**: Create a new Next.js project with TypeScript and essential dependencies.
+**Description**: Create a new Remix project with TypeScript and essential dependencies.
 
 **Requirements**:
-- Next.js 13+ with App Router
+- Remix with latest version
 - TypeScript configuration
 - Essential dependencies: tailwindcss, @types/node, eslint, prettier
 - Basic folder structure following planning-doc.md
@@ -32,13 +32,13 @@ This document provides detailed, atomic tasks that can be implemented asynchrono
 
 **Files to Create**:
 - `package.json` with all dependencies
-- `next.config.js` with TypeScript support
+- `remix.config.js` with TypeScript support
 - `tsconfig.json` with strict mode
 - `tailwind.config.js` with design tokens
 - `.eslintrc.json` with TypeScript rules
-- `src/` folder structure
+- `app/` folder structure
 
-**Output**: Working Next.js project that can be started with `npm run dev`
+**Output**: Working Remix project that can be started with `npm run dev`
 
 ---
 
@@ -106,7 +106,7 @@ REDIS_URL=redis://localhost:6379
 ### 🔌 TASK-004: Tenant Resolution Middleware
 **Complexity**: Medium | **Estimated Time**: 45 min | **Dependencies**: TASK-003
 
-**Description**: Create middleware to resolve tenant from domain/subdomain in API routes.
+**Description**: Create middleware to resolve tenant from domain/subdomain in Remix resource routes.
 
 **Requirements**:
 - Extract tenant from request hostname
@@ -161,7 +161,7 @@ interface TenantContext {
 
 **Files to Create**:
 - `src/lib/features.ts` - Feature flag utilities
-- `src/pages/api/features.ts` - Feature management API
+- `app/routes/api.features.ts` - Feature management API
 - `src/types/features.ts` - Feature TypeScript types
 
 **API Endpoints**:
@@ -201,8 +201,8 @@ type Features = Record<FeatureName, boolean>;
 **Files to Create**:
 - `src/lib/auth.ts` - Authentication utilities
 - `src/middleware/auth.ts` - Authentication middleware
-- `src/pages/api/auth/login.ts` - Login endpoint
-- `src/pages/api/auth/register.ts` - Registration endpoint
+- `app/routes/api.auth.login.ts` - Login endpoint
+- `app/routes/api.auth.register.ts` - Registration endpoint
 - `src/types/auth.ts` - Authentication types
 
 **JWT Payload**:
@@ -276,7 +276,7 @@ interface LayoutProps {
 - Works with tenant context
 
 **Files to Create**:
-- `src/pages/admin/index.tsx` - Dashboard page
+- `app/routes/admin._index.tsx` - Dashboard page
 - `src/components/admin/Dashboard.tsx` - Dashboard component
 - `src/components/admin/FeatureCard.tsx` - Feature card component
 - `src/hooks/useFeatures.ts` - Feature flag hook
@@ -353,23 +353,23 @@ deleteMenuItem(tenantId: string, id: string): Promise<void>
 - Consistent error response format
 
 **Files to Create**:
-- `src/pages/api/menu/categories.ts` - Category endpoints
-- `src/pages/api/menu/categories/[id].ts` - Single category
-- `src/pages/api/menu/items.ts` - Menu item endpoints
-- `src/pages/api/menu/items/[id].ts` - Single menu item
-- `src/pages/api/menu/search.ts` - Search endpoint
+- `app/routes/api.menu.categories.ts` - Category endpoints
+- `app/routes/api.menu.categories.$id.ts` - Single category
+- `app/routes/api.menu.items.ts` - Menu item endpoints
+- `app/routes/api.menu.items.$id.ts` - Single menu item
+- `app/routes/api.menu.search.ts` - Search endpoint
 
 **API Endpoints**:
 ```
 GET    /api/menu/categories
 POST   /api/menu/categories
-PUT    /api/menu/categories/[id]
-DELETE /api/menu/categories/[id]
+PUT    /api/menu/categories/$id
+DELETE /api/menu/categories/$id
 
 GET    /api/menu/items
 POST   /api/menu/items
-PUT    /api/menu/items/[id]
-DELETE /api/menu/items/[id]
+PUT    /api/menu/items/$id
+DELETE /api/menu/items/$id
 
 GET    /api/menu/search?q=query
 ```
@@ -397,7 +397,7 @@ GET    /api/menu/search?q=query
 - Confirmation dialogs for destructive actions
 
 **Files to Create**:
-- `src/pages/admin/menu/categories.tsx` - Categories page
+- `app/routes/admin.menu.categories.tsx` - Categories page
 - `src/components/menu/CategoryList.tsx` - Category list component
 - `src/components/menu/CategoryForm.tsx` - Category form
 - `src/hooks/useCategories.ts` - Categories data hook
@@ -433,7 +433,7 @@ GET    /api/menu/search?q=query
 - Mobile-responsive design
 
 **Files to Create**:
-- `src/pages/admin/menu/items.tsx` - Items page
+- `app/routes/admin.menu.items.tsx` - Items page
 - `src/components/menu/ItemList.tsx` - Item list component
 - `src/components/menu/ItemForm.tsx` - Item form
 - `src/components/menu/ImageUpload.tsx` - Image upload component
@@ -473,7 +473,7 @@ GET    /api/menu/search?q=query
 - Mobile-friendly interface
 
 **Files to Create**:
-- `src/pages/menu/index.tsx` - Public menu page
+- `app/routes/menu._index.tsx` - Public menu page
 - `src/components/menu/PublicMenu.tsx` - Menu display component
 - `src/components/menu/MenuSearch.tsx` - Search component
 - `src/components/menu/MenuItem.tsx` - Menu item card
@@ -558,8 +558,8 @@ pending → confirmed → preparing → ready → completed
 
 **Files to Create**:
 - `src/lib/stripe.ts` - Stripe utilities
-- `src/pages/api/payments/create-intent.ts` - Payment intent API
-- `src/pages/api/payments/webhook.ts` - Stripe webhook handler
+- `app/routes/api.payments.create-intent.ts` - Payment intent API
+- `app/routes/api.payments.webhook.ts` - Stripe webhook handler
 - `src/types/payment.ts` - Payment types
 
 **Environment Variables**:
@@ -599,18 +599,18 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 - Error handling is comprehensive
 
 **Files to Create**:
-- `src/pages/api/orders/index.ts` - Order list/create
-- `src/pages/api/orders/[id].ts` - Single order operations
-- `src/pages/api/orders/[id]/status.ts` - Status updates
-- `src/pages/api/orders/analytics.ts` - Order analytics
+- `app/routes/api.orders._index.ts` - Order list/create
+- `app/routes/api.orders.$id.ts` - Single order operations
+- `app/routes/api.orders.$id.status.ts` - Status updates
+- `app/routes/api.orders.analytics.ts` - Order analytics
 - `src/lib/realtime.ts` - Real-time update utilities
 
 **API Endpoints**:
 ```
 GET    /api/orders
 POST   /api/orders
-GET    /api/orders/[id]
-PUT    /api/orders/[id]/status
+GET    /api/orders/$id
+PUT    /api/orders/$id/status
 GET    /api/orders/analytics
 ```
 
@@ -644,7 +644,7 @@ GET    /api/orders/analytics
 - Mobile-optimized design
 
 **Files to Create**:
-- `src/pages/order/index.tsx` - Order page
+- `app/routes/order._index.tsx` - Order page
 - `src/components/order/Cart.tsx` - Shopping cart
 - `src/components/order/Checkout.tsx` - Checkout component
 - `src/components/order/PaymentForm.tsx` - Payment form
@@ -690,7 +690,7 @@ GET    /api/orders/analytics
 - Useful analytics display
 
 **Files to Create**:
-- `src/pages/admin/orders/index.tsx` - Orders dashboard
+- `app/routes/admin.orders._index.tsx` - Orders dashboard
 - `src/components/orders/OrderList.tsx` - Order list component
 - `src/components/orders/OrderCard.tsx` - Order card
 - `src/components/orders/OrderDetails.tsx` - Order details modal
@@ -781,11 +781,11 @@ redeemReward(tenantId: string, customerId: string, rewardId: string): Promise<vo
 - Integration with orders is seamless
 
 **Files to Create**:
-- `src/pages/api/loyalty/points.ts` - Points management
-- `src/pages/api/loyalty/history.ts` - Point history
-- `src/pages/api/loyalty/rewards.ts` - Rewards management
-- `src/pages/api/loyalty/redeem.ts` - Redemption endpoint
-- `src/pages/api/loyalty/analytics.ts` - Loyalty analytics
+- `app/routes/api.loyalty.points.ts` - Points management
+- `app/routes/api.loyalty.history.ts` - Point history
+- `app/routes/api.loyalty.rewards.ts` - Rewards management
+- `app/routes/api.loyalty.redeem.ts` - Redemption endpoint
+- `app/routes/api.loyalty.analytics.ts` - Loyalty analytics
 
 **API Endpoints**:
 ```
@@ -829,7 +829,7 @@ GET    /api/loyalty/analytics
 - Proper error handling
 
 **Files to Create**:
-- `src/pages/loyalty/index.tsx` - Loyalty dashboard
+- `app/routes/loyalty._index.tsx` - Loyalty dashboard
 - `src/components/loyalty/PointsBalance.tsx` - Points display
 - `src/components/loyalty/PointsHistory.tsx` - Transaction history
 - `src/components/loyalty/RewardsList.tsx` - Available rewards
@@ -873,8 +873,8 @@ GET    /api/loyalty/analytics
 - Program performance metrics
 
 **Files to Create**:
-- `src/pages/admin/loyalty/index.tsx` - Loyalty settings
-- `src/pages/admin/loyalty/rewards.tsx` - Reward management
+- `app/routes/admin.loyalty._index.tsx` - Loyalty settings
+- `app/routes/admin.loyalty.rewards.tsx` - Reward management
 - `src/components/loyalty/admin/LoyaltySettings.tsx` - Settings form
 - `src/components/loyalty/admin/RewardForm.tsx` - Reward creation
 - `src/components/loyalty/admin/LoyaltyAnalytics.tsx` - Analytics dashboard
@@ -942,11 +942,11 @@ GET    /api/loyalty/analytics
 **Testing Setup**: Jest with supertest for API testing
 
 **Files to Create**:
-- `src/pages/api/__tests__/menu.test.ts`
-- `src/pages/api/__tests__/orders.test.ts`
-- `src/pages/api/__tests__/loyalty.test.ts`
-- `src/pages/api/__tests__/auth.test.ts`
-- `src/pages/api/__tests__/payments.test.ts`
+- `app/routes/__tests__/api.menu.test.ts`
+- `app/routes/__tests__/api.orders.test.ts`
+- `app/routes/__tests__/api.loyalty.test.ts`
+- `app/routes/__tests__/api.auth.test.ts`
+- `app/routes/__tests__/api.payments.test.ts`
 
 **Test Database**: Use separate test database with cleanup between tests
 
