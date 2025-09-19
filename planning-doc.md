@@ -23,8 +23,8 @@ GrowPlate is a multi-tenant restaurant management platform that provides order m
 - **Payments**: Stripe for multi-tenant payment processing
 
 #### Frontend
-- **Framework**: Next.js (React + TypeScript)
-- **Rendering**: Server-side rendering for SEO optimization
+- **Framework**: Remix (React + TypeScript)
+- **Rendering**: Server-side rendering with progressive enhancement
 - **Styling**: TailwindCSS (recommended)
 - **State Management**: React Context/Zustand
 
@@ -268,15 +268,15 @@ GET    /api/v1/loyalty/history     # Point transaction history
 
 ## Frontend Architecture
 
-### Next.js Application Structure
+### Remix Application Structure
 ```
-src/
-├── components/           # Reusable UI components
+app/
+├── components/          # Reusable UI components
 │   ├── ui/              # Basic UI components
 │   ├── forms/           # Form components
 │   └── layout/          # Layout components
-├── pages/               # Next.js pages
-│   ├── api/             # API routes (proxy to backend)
+├── routes/              # Remix routes
+│   ├── api/             # API resource routes
 │   ├── admin/           # Restaurant admin dashboard
 │   ├── menu/            # Public menu pages
 │   └── orders/          # Customer order pages
@@ -317,7 +317,7 @@ const Dashboard = () => {
 **Goal**: Basic multi-tenant infrastructure with domain resolution
 
 **Tasks**:
-1. Setup Next.js project with TypeScript configuration
+1. Setup Remix project with TypeScript configuration
 2. Configure PostgreSQL database with tenant schema
 3. Setup Redis caching layer
 4. Implement domain-based tenant resolution middleware
@@ -446,9 +446,9 @@ Each phase is broken down into independent, AI-implementable tasks:
 - **Application Caching**: In-memory caching for hot data
 
 ### Frontend Performance
-- **Server-Side Rendering**: Next.js SSR for SEO and performance
+- **Server-Side Rendering**: Remix SSR with progressive enhancement for SEO and performance
 - **Code Splitting**: Dynamic imports for feature modules
-- **Image Optimization**: Next.js image optimization
+- **Image Optimization**: Remix with optimized image handling
 - **Bundle Optimization**: Tree shaking and minification
 
 ## Monitoring and Analytics
@@ -467,7 +467,7 @@ Each phase is broken down into independent, AI-implementable tasks:
 
 ### Docker Containerization
 ```dockerfile
-# Multi-stage build for Next.js
+# Multi-stage build for Remix
 FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
