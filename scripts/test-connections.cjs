@@ -35,14 +35,15 @@ async function testDatabaseConnections() {
   
   try {
     // Create a simple test file that imports our compiled modules
+    // Note: This script requires TypeScript compilation (npx tsc) to generate the dist directory
     const testFile = `
-const { query, healthCheck, getPoolStatus } = require('./app/lib/db.js');
+const { query, healthCheck, getPoolStatus } = require('./dist/app/lib/db.js');
 const { 
   setTenantCache, 
   getTenantCache, 
   healthCheck: redisHealthCheck,
   getConnectionStatus 
-} = require('./app/lib/redis.js');
+} = require('./dist/app/lib/redis.js');
 
 async function runTests() {
   const results = {
@@ -146,10 +147,10 @@ runTests().then(results => {
       // We'll provide instructions instead of failing
       log.warning('Database connection tests require running PostgreSQL and Redis servers');
       log.info('To test connections manually:');
-      log.info('1. Start PostgreSQL: docker run --name postgres-growplate -e POSTGRES_DB=growplate_dev -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:15');
-      log.info('2. Start Redis: docker run --name redis-growplate -p 6379:6379 -d redis:7-alpine');
-      log.info('3. Copy .env.dev to .env: cp .env.dev .env');
-      log.info('4. Compile TypeScript: npx tsc');
+      log.info('1. Compile TypeScript first: npx tsc');
+      log.info('2. Start PostgreSQL: docker run --name postgres-growplate -e POSTGRES_DB=growplate_dev -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:15');
+      log.info('3. Start Redis: docker run --name redis-growplate -p 6379:6379 -d redis:7-alpine');
+      log.info('4. Copy .env.dev to .env: cp .env.dev .env');
       log.info('5. Run: node temp-db-test.js');
       
       return true;

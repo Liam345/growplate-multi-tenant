@@ -55,44 +55,58 @@ client.on("ready", () => {
 });
 
 client.on("error", (error) => {
-  console.error("Redis client error:", error);
+  console.error("Redis client error:", error instanceof Error ? error.message : "Unknown error");
   isConnected = false;
   isConnecting = false;
+  // Allow future reconnect attempts
+  connectionPromise = null;
 });
 
 client.on("end", () => {
   console.log("Redis client connection ended");
   isConnected = false;
   isConnecting = false;
+  // Reset connection promise for reconnection
+  connectionPromise = null;
 });
 
 /**
  * Ensure Redis connection is established (prevents race conditions)
  */
 const ensureConnection = async (): Promise<void> => {
-  if (isConnected) {
+  // Check actual client readiness
+  if (isConnected && client.isReady) {
     return;
   }
 
   if (connectionPromise) {
     await connectionPromise;
-    return;
+    // Verify connection actually succeeded
+    if (isConnected && client.isReady) return;
+    // Fall through to retry if prior attempt didn't yield ready client
   }
 
   connectionPromise = (async () => {
     try {
       isConnecting = true;
       await client.connect();
+      isConnected = true;
     } catch (error) {
       console.error("Failed to connect to Redis:", error instanceof Error ? error.message : "Unknown error");
-      // Reset for next attempt
+      throw error;
+    } finally {
+      // Always clear the latch
       connectionPromise = null;
       isConnecting = false;
-      throw error;
     }
   })();
 
   await connectionPromise;
+
+  // Ensure callers can react if not ready after attempt
+  if (!client.isReady) {
+    throw new Error("Redis client not ready after connect attempt");
+  }
 };
 
 /**

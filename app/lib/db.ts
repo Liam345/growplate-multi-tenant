@@ -156,12 +156,25 @@ export const tenantQuery = async <T extends QueryResultRow = any>(
 
   const client = await pool.connect();
   try {
+    // Begin explicit transaction - required for SET LOCAL to work properly
+    await client.query("BEGIN");
+    
     // Set tenant_id for RLS policies to use
     await client.query('SET LOCAL "app.tenant_id" = $1', [tenantId]);
     
     // Execute original query without modification - RLS handles tenant isolation
     const result = await client.query<T>(baseQuery, params);
+    
+    // Commit transaction
+    await client.query("COMMIT");
     return result;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      // Ignore rollback errors
+    }
+    throw error;
   } finally {
     client.release();
   }
