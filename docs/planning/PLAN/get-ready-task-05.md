@@ -85,6 +85,10 @@ docker exec -i postgres-growplate psql -U postgres -d growplate_dev < database/s
 # Apply indexes using Docker
 docker exec -i postgres-growplate psql -U postgres -d growplate_dev < database/indexes.sql
 
+# Apply Row-Level Security policies using Docker (CRITICAL for tenant isolation)
+# Note: This is now essential as tenant queries use explicit transactions with RLS
+docker exec -i postgres-growplate psql -U postgres -d growplate_dev < database/rls.sql
+
 # Optional: Add seed data using Docker
 docker exec -i postgres-growplate psql -U postgres -d growplate_dev < database/seed.sql
 ```
@@ -112,11 +116,18 @@ docker exec -it postgres-growplate psql -U postgres -d growplate_dev
 \d loyalty_transactions
 \d loyalty_rewards
 
+# Verify Row-Level Security is enabled
+SELECT * FROM check_rls_status();
+
 # Exit
 \q
 ```
 
-**Expected Result**: All 9 tables created with proper structure
+**Expected Result**: 
+- All 9 tables created with proper structure
+- RLS (Row-Level Security) enabled on all tenant tables  
+- RLS policies show proper tenant isolation
+- Explicit transaction support ensures secure tenant queries
 
 ### Step 3: Test TASK-003 (Database Connections)
 
@@ -189,11 +200,26 @@ DEV_TENANT_ID=
 #### 3.3 Test Database Connections
 
 ```bash
+# IMPORTANT: Compile TypeScript first (required for test script imports)
+npx tsc
+
 # Run the connection test script
 node scripts/test-connections.cjs
+
+# If you want to test actual connections (requires running servers):
+# 1. Ensure PostgreSQL and Redis containers are running
+# 2. Copy environment file: cp .env.dev .env
+# 3. TypeScript compilation (npx tsc) - already done above
+# 4. Then the test script can create actual connections
 ```
 
 **Expected Result**: All connection tests pass
+
+**Security & Performance Notes**: 
+- The database now uses Row-Level Security (RLS) with explicit transactions for secure tenant isolation
+- Redis operations use non-blocking SCAN commands for better production performance
+- Enhanced connection management prevents race conditions and improves reliability
+- The test script now correctly imports from compiled output in the `./dist/` directory
 
 ### Step 4: Test TASK-004 (Tenant Resolution Middleware)
 
@@ -468,6 +494,11 @@ The feature flag system will use these cache keys:
 - `growplate:tenant:features:{tenantId}` - Cached feature flags for a tenant
 - TTL: 30 minutes (1800 seconds)
 
+**Performance Notes**: 
+- Redis operations now use enhanced connection management with race condition prevention
+- Cache clearing operations use non-blocking SCAN for production safety
+- Improved error handling and automatic connection recovery
+
 ### Step 7: Final Preparation Checklist
 
 #### 7.1 Environment Verification
@@ -587,8 +618,26 @@ rm -rf dist
 # Reinstall dependencies
 npm install
 
-# Check compilation
+# Check compilation (required for test scripts)
 npx tsc --noEmit
+
+# Compile for test script execution
+npx tsc
+```
+
+#### Connection Test Import Issues
+
+If the test script fails with import errors:
+
+```bash
+# Ensure TypeScript is compiled first
+npx tsc
+
+# Verify compiled files exist
+ls -la dist/app/lib/
+
+# The test script now correctly imports from dist/ directory
+# This was fixed to resolve Node.js import issues with TypeScript files
 ```
 
 Your development environment is now fully prepared for implementing the Feature Flag System! 🚀

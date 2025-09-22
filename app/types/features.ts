@@ -4,7 +4,7 @@
  * Type definitions for the feature flag system.
  */
 
-export type FeatureName = 'menu' | 'orders' | 'loyalty';
+export type FeatureName = 'menu' | 'orders' | 'loyalty' | 'reservations' | 'analytics' | 'notifications' | 'payments' | 'reviews';
 
 export type Features = Record<FeatureName, boolean>;
 

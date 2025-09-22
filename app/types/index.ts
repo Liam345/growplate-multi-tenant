@@ -89,9 +89,8 @@ export interface OrderItem {
   createdAt: Date;
 }
 
-// Feature flags
-export type FeatureName = "orders" | "loyalty" | "menu";
-export type Features = Record<FeatureName, boolean>;
+// Re-export feature types for consistency
+export type { FeatureName, Features, FeatureFlag, TenantFeatures } from "./features";
 
 // API response types
 export interface ApiResponse<T> {
