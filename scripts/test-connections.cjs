@@ -124,7 +124,13 @@ runTests().then(results => {
 
     try {
       // Write the test file temporarily
-      require('fs').writeFileSync(tempFilePath, testFile);
+      const fs = require('fs');
+      try {
+        fs.writeFileSync(tempFilePath, testFile);
+      } catch (e) {
+        log.error(`Failed to write temporary test file: ${e.message}`);
+        return false;
+      }
       
       log.info('Testing TypeScript compilation...');
       
@@ -156,9 +162,14 @@ runTests().then(results => {
       return true;
     } finally {
       // Always clean up temporary file, even if TypeScript compilation fails
-      if (require('fs').existsSync(tempFilePath)) {
-        require('fs').unlinkSync(tempFilePath);
-        log.info('Cleaned up temporary test file');
+      const fs = require('fs');
+      if (fs.existsSync(tempFilePath)) {
+        try {
+          fs.unlinkSync(tempFilePath);
+          log.info('Cleaned up temporary test file');
+        } catch (e) {
+          log.warning(`Failed to clean up temporary test file: ${e.message}`);
+        }
       }
     }
     

@@ -57,7 +57,9 @@ export function parseDomain(hostname: string, config?: DomainConfig): DomainInfo
   const cleanHostname = hostname.replace(/^https?:\/\//, "").toLowerCase().trim();
 
   // Extract port if present
-  const [hostPart, port] = cleanHostname.split(":");
+  const [rawHostPart, port] = cleanHostname.split(":");
+  // Strip leading/trailing dots from hostname
+  const hostPart = rawHostPart.replace(/\.+$/, "").replace(/^\.+/, "");
 
   // Check if localhost
   const isLocalhost = hostPart === "localhost" || hostPart.startsWith("127.") || hostPart === "::1";
@@ -73,7 +75,7 @@ export function parseDomain(hostname: string, config?: DomainConfig): DomainInfo
 
     return {
       hostname: cleanHostname,
-      domain: hostPart,
+      domain: normalizeDomain(hostPart),
       subdomain: null,
       port: port || null,
       isCustomDomain: false,
@@ -81,8 +83,8 @@ export function parseDomain(hostname: string, config?: DomainConfig): DomainInfo
     };
   }
 
-  // Split domain parts
-  const parts = hostPart.split(".");
+  // Split domain parts and filter out empty parts
+  const parts = hostPart.split(".").filter(Boolean);
 
   if (parts.length < 2) {
     throw new TenantError(
@@ -93,10 +95,10 @@ export function parseDomain(hostname: string, config?: DomainConfig): DomainInfo
   }
 
   // Check if this is a subdomain of our platform (e.g., restaurant.growplate.com)
-  const platformParts = domainConfig.platformDomain.split(".");
+  const platformParts = domainConfig.platformDomain.split(".").map(s => s.trim().toLowerCase()).filter(Boolean);
   const isSubdomainOfPlatform = 
     parts.length >= platformParts.length + 1 &&
-    parts.slice(-platformParts.length).join(".") === domainConfig.platformDomain;
+    parts.slice(-platformParts.length).join(".") === domainConfig.platformDomain.toLowerCase();
 
   let domain: string;
   let subdomain: string | null = null;
@@ -105,7 +107,18 @@ export function parseDomain(hostname: string, config?: DomainConfig): DomainInfo
   if (isSubdomainOfPlatform) {
     // Extract subdomain (support multi-level subdomains)
     const subdomainParts = parts.slice(0, -(platformParts.length));
-    subdomain = subdomainParts.join(".");
+    const computedSub = subdomainParts.join(".").toLowerCase().trim();
+
+    // Reject empty, wildcard, or invalid subdomains
+    if (!computedSub || computedSub === "*" || /[*]/.test(computedSub)) {
+      throw new TenantError(
+        "DOMAIN_PARSE_ERROR",
+        `Invalid subdomain for platform domain: ${hostname}`,
+        { hostname, subdomain: computedSub }
+      );
+    }
+
+    subdomain = computedSub;
     domain = parts.slice(subdomainParts.length).join(".");
     isCustomDomain = false;
   } else {
@@ -115,9 +128,11 @@ export function parseDomain(hostname: string, config?: DomainConfig): DomainInfo
     isCustomDomain = true;
   }
 
+  const normalizedDomain = normalizeDomain(domain);
+
   return {
     hostname: cleanHostname,
-    domain,
+    domain: normalizedDomain,
     subdomain,
     port: port || null,
     isCustomDomain,

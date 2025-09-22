@@ -89,6 +89,8 @@ CREATE INDEX idx_loyalty_rewards_points ON loyalty_rewards(tenant_id, points_req
 -- Time-based analytics indexes (simplified for compatibility)
 -- Note: These are optimized for time-range queries rather than exact date grouping
 CREATE INDEX idx_orders_analytics_time ON orders(tenant_id, created_at, status);
+-- Complementary index to accelerate queries filtering by status within time ranges
+CREATE INDEX idx_orders_analytics_status_time ON orders(tenant_id, status, created_at);
 -- For daily/monthly analytics, queries will use created_at with date range filters
 
 -- Revenue tracking indexes  

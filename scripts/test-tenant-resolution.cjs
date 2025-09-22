@@ -38,7 +38,11 @@ function testTypeScriptCompilation() {
     return true;
   } catch (error) {
     log.error("TypeScript compilation failed");
-    console.log(error.stdout?.toString() || error.stderr?.toString());
+    const stdout = error.stdout?.toString();
+    const stderr = error.stderr?.toString();
+    if (stdout) console.log("STDOUT:\n", stdout);
+    if (stderr) console.log("STDERR:\n", stderr);
+    process.exitCode = 1; // ensure overall failure status is propagated
     return false;
   }
 }
