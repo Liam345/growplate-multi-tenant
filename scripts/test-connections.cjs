@@ -122,12 +122,18 @@ runTests().then(results => {
 });
 `;
 
-    // Write the test file temporarily
-    require('fs').writeFileSync(tempFilePath, testFile);
-    
-    log.info('Testing TypeScript compilation...');
-    
     try {
+      // Write the test file temporarily
+      const fs = require('fs');
+      try {
+        fs.writeFileSync(tempFilePath, testFile);
+      } catch (e) {
+        log.error(`Failed to write temporary test file: ${e.message}`);
+        return false;
+      }
+      
+      log.info('Testing TypeScript compilation...');
+      
       // Test TypeScript compilation first
       try {
         execSync('npx tsc --noEmit', { cwd: process.cwd(), stdio: 'pipe' });
@@ -155,9 +161,15 @@ runTests().then(results => {
       
       return true;
     } finally {
-      // Always clean up temporary file
-      if (require('fs').existsSync(tempFilePath)) {
-        require('fs').unlinkSync(tempFilePath);
+      // Always clean up temporary file, even if TypeScript compilation fails
+      const fs = require('fs');
+      if (fs.existsSync(tempFilePath)) {
+        try {
+          fs.unlinkSync(tempFilePath);
+          log.info('Cleaned up temporary test file');
+        } catch (e) {
+          log.warning(`Failed to clean up temporary test file: ${e.message}`);
+        }
       }
     }
     

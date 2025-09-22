@@ -14,7 +14,11 @@
     "format": "prettier --write .",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "clean": "rm -rf build .cache node_modules/.cache",
+    "setup": "npm run clean && npm install && npm run typecheck",
+    "test:db": "node scripts/test-connections.cjs",
+    "test:tenant": "node scripts/test-tenant-resolution.cjs"
   },
   "dependencies": {
     "@remix-run/node": "^2.4.1",

@@ -136,14 +136,28 @@ const serialize = (value: CacheValue): string => {
  */
 const deserialize = <T = CacheValue>(value: string | null): T | null => {
   if (value === null) return null;
-  
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    // If parsing fails, the data is corrupt or not JSON
-    console.warn("Redis deserialize: Failed to parse cached value as JSON");
+  if (typeof value !== "string") {
+    // Defensive: unexpected type, cannot safely deserialize
     return null;
   }
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return "" as unknown as T;
+  }
+
+  // Only attempt JSON parsing for values that look like objects or arrays
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      return JSON.parse(trimmed) as T;
+    } catch (e) {
+      console.error("Failed to deserialize JSON from Redis:", e);
+      return null;
+    }
+  }
+
+  // For primitive types stored as strings (numbers, booleans, or plain strings)
+  // that were not JSON.stringified objects/arrays, return as-is
+  return value as T;
 };
 
 /**
