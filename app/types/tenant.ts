@@ -109,7 +109,8 @@ export type TenantResolutionErrorCode =
   | "DATABASE_ERROR"
   | "CACHE_ERROR"
   | "DOMAIN_PARSE_ERROR"
-  | "TENANT_DISABLED";
+  | "TENANT_DISABLED"
+  | "LOCALHOST_NOT_ALLOWED";
 
 export interface TenantResolutionError {
   code: TenantResolutionErrorCode;

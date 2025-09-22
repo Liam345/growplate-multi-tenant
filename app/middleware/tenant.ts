@@ -5,6 +5,7 @@
  * and adds it to the request context for use in loaders and actions.
  */
 
+import { AsyncLocalStorage } from "async_hooks";
 import type {
   TenantContext,
   TenantResolutionResult,
@@ -34,34 +35,60 @@ const DEFAULT_CONFIG: TenantMiddlewareConfig = {
 // TENANT CONTEXT STORAGE
 // =====================================================================================
 
-// Store tenant context for the current request
-// This uses AsyncLocalStorage-like pattern for Remix
-let currentTenant: TenantContext | null = null;
-let currentResolution: TenantResolutionResult | null = null;
+/**
+ * Interface for tenant request context stored in AsyncLocalStorage
+ */
+interface TenantRequestContext {
+  tenant: TenantContext | null;
+  resolution: TenantResolutionResult | null;
+}
 
 /**
- * Get current tenant from request context
+ * AsyncLocalStorage for request-scoped tenant context
+ * This ensures tenant isolation between concurrent requests
+ */
+const tenantContextStorage = new AsyncLocalStorage<TenantRequestContext>();
+
+/**
+ * Get current tenant from request context (thread-safe)
  */
 export function getCurrentTenant(): TenantContext | null {
-  return currentTenant;
+  return tenantContextStorage.getStore()?.tenant ?? null;
 }
 
 /**
- * Get current tenant resolution result
+ * Get current tenant resolution result (thread-safe)
  */
 export function getCurrentTenantResolution(): TenantResolutionResult | null {
-  return currentResolution;
+  return tenantContextStorage.getStore()?.resolution ?? null;
 }
 
 /**
- * Set current tenant context (internal use)
+ * Execute function with tenant context (thread-safe)
  */
-function setCurrentTenant(
+export function withTenantContext<T>(
   tenant: TenantContext | null,
-  resolution: TenantResolutionResult | null
-) {
-  currentTenant = tenant;
-  currentResolution = resolution;
+  resolution: TenantResolutionResult | null,
+  fn: () => T
+): T {
+  return tenantContextStorage.run(
+    { tenant, resolution },
+    fn
+  );
+}
+
+/**
+ * Execute async function with tenant context (thread-safe)
+ */
+export function withTenantContextAsync<T>(
+  tenant: TenantContext | null,
+  resolution: TenantResolutionResult | null,
+  fn: () => Promise<T>
+): Promise<T> {
+  return tenantContextStorage.run(
+    { tenant, resolution },
+    fn
+  );
 }
 
 // =====================================================================================
@@ -92,7 +119,7 @@ export function createTenantMiddleware(
         responseTime: 0,
       };
 
-      setCurrentTenant(null, skipResult);
+      // Note: For skip paths, we don't set context as these shouldn't need tenant data
       return { tenant: null, resolution: skipResult };
     }
 
@@ -143,7 +170,7 @@ export function createTenantMiddleware(
         }
 
         // Tenant not required, continue without tenant
-        setCurrentTenant(null, resolution);
+        // Note: For non-required paths, we don't set context but return resolution info
         return { tenant: null, resolution };
       }
 
@@ -159,7 +186,7 @@ export function createTenantMiddleware(
         responseTime: resolution.responseTime,
       });
 
-      setCurrentTenant(tenant, resolution);
+      // Note: Context is set by the calling wrapper function that uses withTenantContext
       return { tenant, resolution };
     } catch (error) {
       console.error("Tenant middleware error:", error);
@@ -212,13 +239,16 @@ export function withTenant<T extends Record<string, any>>(
     params: any;
     context?: any;
   }): Promise<T> {
-    const { tenant } = await tenantMiddleware(args.request);
+    const { tenant, resolution } = await tenantMiddleware(args.request);
 
     if (!tenant) {
       throw new Response("Tenant required", { status: 404 });
     }
 
-    return loader({ ...args, tenant });
+    // Execute loader within tenant context for safe access to getCurrentTenant()
+    return withTenantContextAsync(tenant, resolution, async () => {
+      return loader({ ...args, tenant });
+    });
   };
 }
 
@@ -238,21 +268,24 @@ export function withTenantAction<T extends Record<string, any>>(
     params: any;
     context?: any;
   }): Promise<T> {
-    const { tenant } = await tenantMiddleware(args.request);
+    const { tenant, resolution } = await tenantMiddleware(args.request);
 
     if (!tenant) {
       throw new Response("Tenant required", { status: 404 });
     }
 
-    return action({ ...args, tenant });
+    // Execute action within tenant context for safe access to getCurrentTenant()
+    return withTenantContextAsync(tenant, resolution, async () => {
+      return action({ ...args, tenant });
+    });
   };
 }
 
 /**
- * Helper to get tenant in Remix loaders/actions
+ * Helper to get tenant in Remix loaders/actions with context
  */
 export async function requireTenant(request: Request): Promise<TenantContext> {
-  const { tenant } = await tenantMiddleware(request);
+  const { tenant, resolution } = await tenantMiddleware(request);
 
   if (!tenant) {
     throw new Response("Tenant not found", {
@@ -267,13 +300,27 @@ export async function requireTenant(request: Request): Promise<TenantContext> {
 }
 
 /**
- * Helper to optionally get tenant in Remix loaders/actions
+ * Helper to optionally get tenant in Remix loaders/actions with context
  */
 export async function getTenant(
   request: Request
 ): Promise<TenantContext | null> {
   const { tenant } = await tenantMiddleware(request);
   return tenant;
+}
+
+/**
+ * New helper to execute a function with tenant context from request
+ */
+export async function withTenantFromRequest<T>(
+  request: Request,
+  fn: (tenant: TenantContext | null) => Promise<T>
+): Promise<T> {
+  const { tenant, resolution } = await tenantMiddleware(request);
+  
+  return withTenantContextAsync(tenant, resolution, async () => {
+    return fn(tenant);
+  });
 }
 
 // =====================================================================================

@@ -29,19 +29,48 @@ import {
 // =====================================================================================
 
 /**
+ * Domain configuration interface
+ */
+export interface DomainConfig {
+  platformDomain: string;
+  allowLocalhost: boolean;
+  requireHttps: boolean;
+}
+
+/**
+ * Get domain configuration from environment variables
+ */
+export function getDomainConfig(): DomainConfig {
+  return {
+    platformDomain: process.env.PLATFORM_DOMAIN || "growplate.com",
+    allowLocalhost: process.env.NODE_ENV === "development" || process.env.ALLOW_LOCALHOST === "true",
+    requireHttps: process.env.NODE_ENV === "production" && process.env.REQUIRE_HTTPS !== "false"
+  };
+}
+
+/**
  * Parse hostname to extract domain components
  */
-export function parseDomain(hostname: string): DomainInfo {
-  // Remove protocol if present
-  const cleanHostname = hostname.replace(/^https?:\/\//, "");
+export function parseDomain(hostname: string, config?: DomainConfig): DomainInfo {
+  const domainConfig = config || getDomainConfig();
+  // Remove protocol if present and normalize
+  const cleanHostname = hostname.replace(/^https?:\/\//, "").toLowerCase().trim();
 
   // Extract port if present
   const [hostPart, port] = cleanHostname.split(":");
 
   // Check if localhost
-  const isLocalhost = hostPart === "localhost" || hostPart === "127.0.0.1";
+  const isLocalhost = hostPart === "localhost" || hostPart.startsWith("127.") || hostPart === "::1";
 
   if (isLocalhost) {
+    if (!domainConfig.allowLocalhost) {
+      throw new TenantError(
+        "LOCALHOST_NOT_ALLOWED",
+        "Localhost access not permitted in this environment",
+        { hostname, environment: process.env.NODE_ENV }
+      );
+    }
+
     return {
       hostname: cleanHostname,
       domain: hostPart,
@@ -64,17 +93,20 @@ export function parseDomain(hostname: string): DomainInfo {
   }
 
   // Check if this is a subdomain of our platform (e.g., restaurant.growplate.com)
-  const isSubdomainOfPlatform =
-    parts.length >= 3 && parts.slice(-2).join(".") === "growplate.com"; // Configure this for your platform
+  const platformParts = domainConfig.platformDomain.split(".");
+  const isSubdomainOfPlatform = 
+    parts.length >= platformParts.length + 1 &&
+    parts.slice(-platformParts.length).join(".") === domainConfig.platformDomain;
 
   let domain: string;
   let subdomain: string | null = null;
   let isCustomDomain: boolean;
 
   if (isSubdomainOfPlatform) {
-    // Extract subdomain from restaurant.growplate.com
-    subdomain = parts[0];
-    domain = parts.slice(1).join(".");
+    // Extract subdomain (support multi-level subdomains)
+    const subdomainParts = parts.slice(0, -(platformParts.length));
+    subdomain = subdomainParts.join(".");
+    domain = parts.slice(subdomainParts.length).join(".");
     isCustomDomain = false;
   } else {
     // Custom domain like restaurant.com
