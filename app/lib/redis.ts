@@ -40,6 +40,7 @@ const client: RedisClientType = createClient(config);
 // Connection state
 let isConnected = false;
 let isConnecting = false;
+let connectionPromise: Promise<void> | null = null;
 
 // Handle Redis events
 client.on("connect", () => {
@@ -54,36 +55,57 @@ client.on("ready", () => {
 });
 
 client.on("error", (error) => {
-  console.error("Redis client error:", error);
+  console.error("Redis client error:", error instanceof Error ? error.message : "Unknown error");
   isConnected = false;
   isConnecting = false;
+  // Allow future reconnect attempts
+  connectionPromise = null;
 });
 
 client.on("end", () => {
   console.log("Redis client connection ended");
   isConnected = false;
   isConnecting = false;
+  // Reset connection promise for reconnection
+  connectionPromise = null;
 });
 
 /**
- * Ensure Redis connection is established
+ * Ensure Redis connection is established (prevents race conditions)
  */
 const ensureConnection = async (): Promise<void> => {
-  if (isConnected) return;
-  
-  if (isConnecting) {
-    // Wait for connection to complete
-    while (isConnecting) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
+  // Check actual client readiness
+  if (isConnected && client.isReady) {
     return;
   }
 
-  try {
-    await client.connect();
-  } catch (error) {
-    console.error("Failed to connect to Redis:", error);
-    throw error;
+  if (connectionPromise) {
+    await connectionPromise;
+    // Verify connection actually succeeded
+    if (isConnected && client.isReady) return;
+    // Fall through to retry if prior attempt didn't yield ready client
+  }
+
+  connectionPromise = (async () => {
+    try {
+      isConnecting = true;
+      await client.connect();
+      isConnected = true;
+    } catch (error) {
+      console.error("Failed to connect to Redis:", error instanceof Error ? error.message : "Unknown error");
+      throw error;
+    } finally {
+      // Always clear the latch
+      connectionPromise = null;
+      isConnecting = false;
+    }
+  })();
+
+  await connectionPromise;
+
+  // Ensure callers can react if not ready after attempt
+  if (!client.isReady) {
+    throw new Error("Redis client not ready after connect attempt");
   }
 };
 
@@ -110,7 +132,7 @@ const serialize = (value: CacheValue): string => {
 };
 
 /**
- * Deserialize a value from Redis storage
+ * Deserialize a value from Redis storage with type safety
  */
 const deserialize = <T = CacheValue>(value: string | null): T | null => {
   if (value === null) return null;
@@ -118,8 +140,9 @@ const deserialize = <T = CacheValue>(value: string | null): T | null => {
   try {
     return JSON.parse(value) as T;
   } catch {
-    // If parsing fails, return as string
-    return value as T;
+    // If parsing fails, the data is corrupt or not JSON
+    console.warn("Redis deserialize: Failed to parse cached value as JSON");
+    return null;
   }
 };
 
@@ -146,7 +169,10 @@ export const setTenantCache = async <T extends CacheValue>(
     
     return true;
   } catch (error) {
-    console.error("Redis set error:", error);
+    console.error("Redis set error:", {
+      operation: "setTenantCache",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
     return false;
   }
 };
@@ -166,7 +192,10 @@ export const getTenantCache = async <T = CacheValue>(
     
     return deserialize<T>(value);
   } catch (error) {
-    console.error("Redis get error:", error);
+    console.error("Redis get error:", {
+      operation: "getTenantCache",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
     return null;
   }
 };
@@ -186,7 +215,10 @@ export const deleteTenantCache = async (
     
     return deleted > 0;
   } catch (error) {
-    console.error("Redis delete error:", error);
+    console.error("Redis delete error:", {
+      operation: "deleteTenantCache",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
     return false;
   }
 };
@@ -213,7 +245,10 @@ export const setGlobalCache = async <T extends CacheValue>(
     
     return true;
   } catch (error) {
-    console.error("Redis set global error:", error);
+    console.error("Redis set global error:", {
+      operation: "setGlobalCache",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
     return false;
   }
 };
@@ -232,7 +267,10 @@ export const getGlobalCache = async <T = CacheValue>(
     
     return deserialize<T>(value);
   } catch (error) {
-    console.error("Redis get global error:", error);
+    console.error("Redis get global error:", {
+      operation: "getGlobalCache",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
     return null;
   }
 };
@@ -249,27 +287,43 @@ export const deleteGlobalCache = async (key: string): Promise<boolean> => {
     
     return deleted > 0;
   } catch (error) {
-    console.error("Redis delete global error:", error);
+    console.error("Redis delete global error:", {
+      operation: "deleteGlobalCache",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
     return false;
   }
 };
 
 /**
- * Clear all cache entries for a specific tenant
+ * Clear all cache entries for a specific tenant using non-blocking SCAN
  */
 export const clearTenantCache = async (tenantId: string): Promise<number> => {
   try {
     await ensureConnection();
     
     const pattern = getTenantKey(tenantId, "*");
-    const keys = await client.keys(pattern);
+    const keysToDelete: string[] = [];
+    let cursor = 0;
+
+    // Use non-blocking SCAN instead of blocking KEYS
+    do {
+      const reply = await client.scan(cursor, { MATCH: pattern, COUNT: 100 });
+      cursor = reply.cursor;
+      keysToDelete.push(...reply.keys);
+    } while (cursor !== 0);
+
+    if (keysToDelete.length === 0) {
+      return 0;
+    }
     
-    if (keys.length === 0) return 0;
-    
-    const deleted = await client.del(keys);
+    const deleted = await client.del(keysToDelete);
     return deleted;
   } catch (error) {
-    console.error("Redis clear tenant cache error:", error);
+    console.error("Redis clear tenant cache error:", {
+      operation: "clearTenantCache",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
     return 0;
   }
 };
@@ -307,7 +361,10 @@ export const healthCheck = async (): Promise<boolean> => {
     await client.ping();
     return true;
   } catch (error) {
-    console.error("Redis health check failed:", error);
+    console.error("Redis health check failed:", {
+      operation: "healthCheck",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
     return false;
   }
 };

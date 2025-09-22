@@ -31,16 +31,19 @@ const log = {
 async function testDatabaseConnections() {
   log.section('Database Connection Tests');
   
+  const tempFilePath = path.join(process.cwd(), 'temp-db-test.js');
+  
   try {
-    // Create a simple test file that imports our modules
+    // Create a simple test file that imports our compiled modules
+    // Note: This script requires TypeScript compilation (npx tsc) to generate the dist directory
     const testFile = `
-const { query, healthCheck, getPoolStatus } = require('./app/lib/db.ts');
+const { query, healthCheck, getPoolStatus } = require('./dist/app/lib/db.js');
 const { 
   setTenantCache, 
   getTenantCache, 
   healthCheck: redisHealthCheck,
   getConnectionStatus 
-} = require('./app/lib/redis.ts');
+} = require('./dist/app/lib/redis.js');
 
 async function runTests() {
   const results = {
@@ -120,35 +123,43 @@ runTests().then(results => {
 `;
 
     // Write the test file temporarily
-    require('fs').writeFileSync(path.join(process.cwd(), 'temp-db-test.js'), testFile);
+    require('fs').writeFileSync(tempFilePath, testFile);
     
     log.info('Testing TypeScript compilation...');
     
-    // Test TypeScript compilation
     try {
-      execSync('npx tsc --noEmit', { cwd: process.cwd(), stdio: 'pipe' });
-      log.success('TypeScript compilation successful');
-    } catch (error) {
-      log.error('TypeScript compilation failed');
-      console.log(error.stdout?.toString() || error.stderr?.toString());
-      return false;
+      // Test TypeScript compilation first
+      try {
+        execSync('npx tsc --noEmit', { cwd: process.cwd(), stdio: 'pipe' });
+        log.success('TypeScript compilation successful');
+      } catch (error) {
+        log.error('TypeScript compilation failed');
+        const stdout = error.stdout?.toString();
+        const stderr = error.stderr?.toString();
+        if (stdout) console.log('STDOUT:\n', stdout);
+        if (stderr) console.log('STDERR:\n', stderr);
+        return false;
+      }
+      
+      log.info('Running connection tests...');
+      
+      // Note: Actual connection tests require database servers to be running
+      // We'll provide instructions instead of failing
+      log.warning('Database connection tests require running PostgreSQL and Redis servers');
+      log.info('To test connections manually:');
+      log.info('1. Compile TypeScript first: npx tsc');
+      log.info('2. Start PostgreSQL: docker run --name postgres-growplate -e POSTGRES_DB=growplate_dev -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:15');
+      log.info('3. Start Redis: docker run --name redis-growplate -p 6379:6379 -d redis:7-alpine');
+      log.info('4. Copy .env.dev to .env: cp .env.dev .env');
+      log.info('5. Run: node temp-db-test.js');
+      
+      return true;
+    } finally {
+      // Always clean up temporary file
+      if (require('fs').existsSync(tempFilePath)) {
+        require('fs').unlinkSync(tempFilePath);
+      }
     }
-    
-    log.info('Running connection tests...');
-    
-    // Note: Actual connection tests require database servers to be running
-    // We'll provide instructions instead of failing
-    log.warning('Database connection tests require running PostgreSQL and Redis servers');
-    log.info('To test connections manually:');
-    log.info('1. Start PostgreSQL: brew services start postgresql (macOS) or docker run postgres');
-    log.info('2. Start Redis: brew services start redis (macOS) or docker run redis');
-    log.info('3. Copy .env.example to .env and update credentials');
-    log.info('4. Run: node temp-db-test.js');
-    
-    // Clean up
-    require('fs').unlinkSync(path.join(process.cwd(), 'temp-db-test.js'));
-    
-    return true;
     
   } catch (error) {
     log.error(`Connection test setup failed: ${error.message}`);

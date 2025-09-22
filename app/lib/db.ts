@@ -80,12 +80,20 @@ export const query: QueryFunction = async <T extends QueryResultRow = any>(
     return result;
   } catch (error) {
     const duration = Date.now() - start;
-    console.error("Database query error:", {
-      text,
-      params,
+    
+    // Sanitized error logging - avoid exposing sensitive data
+    const sanitizedError = {
+      code: (error as any)?.code,
+      message: error instanceof Error ? error.message : "Unknown error",
       duration: `${duration}ms`,
-      error: error instanceof Error ? error.message : error,
-    });
+      // In production, avoid logging query text and parameters which may contain sensitive data
+      ...(process.env.NODE_ENV === "development" && {
+        query: text,
+        paramCount: params?.length || 0
+      })
+    };
+    
+    console.error("Database query error:", sanitizedError);
     throw error;
   }
 };
@@ -134,7 +142,8 @@ export const transaction: TransactionFunction = async <T>(
 };
 
 /**
- * Multi-tenant safe query builder that automatically includes tenant_id
+ * Multi-tenant safe query using Row-Level Security
+ * Requires database tables to have RLS policies that use app.tenant_id setting
  */
 export const tenantQuery = async <T extends QueryResultRow = any>(
   tenantId: string,
@@ -145,25 +154,30 @@ export const tenantQuery = async <T extends QueryResultRow = any>(
     throw new Error("Tenant ID is required for all database operations");
   }
 
-  // Add tenant_id as the first parameter
-  const tenantParams = [tenantId, ...params];
-  
-  // Inject tenant_id condition into WHERE clause or add WHERE clause
-  let modifiedQuery = baseQuery;
-  if (baseQuery.toLowerCase().includes("where")) {
-    modifiedQuery = baseQuery.replace(
-      /where/i,
-      "WHERE tenant_id = $1 AND"
-    );
-  } else if (baseQuery.toLowerCase().includes("from")) {
-    // Find the FROM clause and add WHERE after it
-    modifiedQuery = baseQuery.replace(
-      /(from\s+\w+)/i,
-      "$1 WHERE tenant_id = $1"
-    );
+  const client = await pool.connect();
+  try {
+    // Begin explicit transaction - required for SET LOCAL to work properly
+    await client.query("BEGIN");
+    
+    // Set tenant_id for RLS policies to use
+    await client.query('SET LOCAL "app.tenant_id" = $1', [tenantId]);
+    
+    // Execute original query without modification - RLS handles tenant isolation
+    const result = await client.query<T>(baseQuery, params);
+    
+    // Commit transaction
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      // Ignore rollback errors
+    }
+    throw error;
+  } finally {
+    client.release();
   }
-
-  return query<T>(modifiedQuery, tenantParams);
 };
 
 /**
