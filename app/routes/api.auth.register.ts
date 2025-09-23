@@ -118,11 +118,10 @@ export async function action({ request }: ActionFunctionArgs) {
     // Register user
     const authResponse = await registerUser(tenant.id, requestData);
 
-    // Log successful registration
+    // Log successful registration (without PII)
     console.log('Successful registration:', {
       tenantId: tenant.id,
       userId: authResponse.user.id,
-      email: authResponse.user.email,
       role: authResponse.user.role,
       timestamp: new Date().toISOString()
     });

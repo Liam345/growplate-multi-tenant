@@ -96,11 +96,10 @@ export async function action({ request }: ActionFunctionArgs) {
     // Authenticate user
     const authResponse = await authenticateUser(tenant.id, requestData);
 
-    // Log successful authentication
+    // Log successful authentication (without PII)
     console.log('Successful login:', {
       tenantId: tenant.id,
       userId: authResponse.user.id,
-      email: authResponse.user.email,
       timestamp: new Date().toISOString()
     });
 

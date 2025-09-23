@@ -139,11 +139,10 @@ export async function action({ request }: ActionFunctionArgs) {
       );
     }
 
-    // Log successful token refresh
+    // Log successful token refresh (without PII)
     console.log('Successful token refresh:', {
       tenantId: tenant.id,
       userId: tokenPayload.userId,
-      email: tokenPayload.email,
       timestamp: new Date().toISOString()
     });
 

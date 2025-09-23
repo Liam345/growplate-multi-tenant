@@ -249,6 +249,8 @@ export function generateSecurePassword(length: number = 16): string {
     throw new Error('Password length must be between 8 and 128 characters');
   }
 
+  const { randomInt } = require('crypto');
+
   const lowercase = 'abcdefghijklmnopqrstuvwxyz';
   const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const numbers = '0123456789';
@@ -258,18 +260,25 @@ export function generateSecurePassword(length: number = 16): string {
   let password = '';
 
   // Ensure at least one character from each category
-  password += lowercase[Math.floor(Math.random() * lowercase.length)];
-  password += uppercase[Math.floor(Math.random() * uppercase.length)];
-  password += numbers[Math.floor(Math.random() * numbers.length)];
-  password += special[Math.floor(Math.random() * special.length)];
+  password += lowercase[randomInt(lowercase.length)];
+  password += uppercase[randomInt(uppercase.length)];
+  password += numbers[randomInt(numbers.length)];
+  password += special[randomInt(special.length)];
 
   // Fill the rest randomly
   for (let i = 4; i < length; i++) {
-    password += allChars[Math.floor(Math.random() * allChars.length)];
+    password += allChars[randomInt(allChars.length)];
   }
 
   // Shuffle the password to avoid predictable patterns
-  return password.split('').sort(() => Math.random() - 0.5).join('');
+  // Use Fisher-Yates shuffle with crypto random
+  const passwordArray = password.split('');
+  for (let i = passwordArray.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
+  }
+  
+  return passwordArray.join('');
 }
 
 // =====================================================================================
@@ -288,12 +297,12 @@ export function constantTimeEqual(a: string, b: string): boolean {
     return false;
   }
 
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
+  const { timingSafeEqual } = require('crypto');
+  
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
 
-  return result === 0;
+  return timingSafeEqual(aBuffer, bBuffer);
 }
 
 /**

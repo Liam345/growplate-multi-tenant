@@ -97,7 +97,11 @@ async function createUser(userData: CreateUserData): Promise<UserData> {
     console.error('Error creating user:', error);
     
     // Check for unique constraint violation (email already exists)
-    if (error instanceof Error && error.message.includes('unique constraint')) {
+    if (error instanceof Error && (
+      error.message.includes('unique constraint') ||
+      (error as any).code === '23505' || // PostgreSQL unique violation
+      (error as any).code === 'SQLITE_CONSTRAINT_UNIQUE' // SQLite unique violation
+    )) {
       throw new AuthenticationError(
         AuthErrorCode.EMAIL_ALREADY_EXISTS,
         'An account with this email already exists'

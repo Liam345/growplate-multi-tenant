@@ -64,20 +64,14 @@ export function createToken(
   const now = Math.floor(Date.now() / 1000);
   const expiresIn = options.expiresIn || config.jwtExpiresIn;
   
-  // Calculate expiration timestamp
+  // Simplified expiration calculation - delegate complex parsing to library in the future
   let exp: number;
-  if (typeof expiresIn === 'string') {
-    // Parse time strings like '24h', '7d', '30m'
-    const timeValue = parseInt(expiresIn);
-    const timeUnit = expiresIn.slice(-1);
-    
-    switch (timeUnit) {
-      case 's': exp = now + timeValue; break;
-      case 'm': exp = now + (timeValue * 60); break;
-      case 'h': exp = now + (timeValue * 60 * 60); break;
-      case 'd': exp = now + (timeValue * 24 * 60 * 60); break;
-      default: exp = now + (24 * 60 * 60); // Default to 24 hours
-    }
+  if (typeof expiresIn === 'string' && expiresIn.endsWith('h')) {
+    const hours = parseInt(expiresIn);
+    exp = now + (hours * 60 * 60);
+  } else if (typeof expiresIn === 'string' && expiresIn.endsWith('d')) {
+    const days = parseInt(expiresIn);
+    exp = now + (days * 24 * 60 * 60);
   } else {
     exp = now + (24 * 60 * 60); // Default to 24 hours
   }
@@ -301,7 +295,9 @@ function isValidJWTPayload(payload: any): payload is JWTPayload {
     return false;
   }
 
-  if (payload.exp < now || payload.exp > oneYearFromNow) {
+  // The jwt.verify function already checks for expiration.
+  // This check is for sanity, ensuring the expiration is not too far in the future.
+  if (payload.exp > oneYearFromNow) {
     return false;
   }
 
