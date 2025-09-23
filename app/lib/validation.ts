@@ -15,7 +15,7 @@ const VALID_FEATURES: FeatureName[] = ['orders', 'loyalty', 'menu'];
  * Validate feature update payload
  * Ensures the input is a valid partial Features object
  */
-export function validateFeatureUpdate(features: any): features is Partial<Features> {
+export function validateFeatureUpdate(features: unknown): features is Partial<Features> {
   if (!features || typeof features !== 'object' || Array.isArray(features)) {
     return false;
   }
@@ -30,16 +30,17 @@ export function validateFeatureUpdate(features: any): features is Partial<Featur
  * Sanitize features object
  * Returns only valid features with boolean values
  */
-export function sanitizeFeatures(features: any): Partial<Features> {
+export function sanitizeFeatures(features: unknown): Partial<Features> {
   if (!features || typeof features !== 'object' || Array.isArray(features)) {
     return {};
   }
 
   const sanitized: Partial<Features> = {};
+  const featuresObj = features as Record<string, unknown>;
 
   VALID_FEATURES.forEach(feature => {
-    if (feature in features && typeof features[feature] === 'boolean') {
-      sanitized[feature] = features[feature];
+    if (feature in featuresObj && typeof featuresObj[feature] === 'boolean') {
+      sanitized[feature] = featuresObj[feature];
     }
   });
 
@@ -56,7 +57,7 @@ export function isValidFeatureName(name: string): name is FeatureName {
 /**
  * Validate feature value
  */
-export function isValidFeatureValue(value: any): value is boolean {
+export function isValidFeatureValue(value: unknown): value is boolean {
   return typeof value === 'boolean';
 }
 
@@ -64,21 +65,23 @@ export function isValidFeatureValue(value: any): value is boolean {
  * Validate complete Features object
  * Ensures all required features are present with valid values
  */
-export function validateCompleteFeatures(features: any): features is Features {
+export function validateCompleteFeatures(features: unknown): features is Features {
   if (!features || typeof features !== 'object' || Array.isArray(features)) {
     return false;
   }
 
+  const featuresObj = features as Record<string, unknown>;
+
   // Check that all required features are present with boolean values
   return VALID_FEATURES.every(feature => 
-    feature in features && typeof features[feature] === 'boolean'
+    feature in featuresObj && typeof featuresObj[feature] === 'boolean'
   );
 }
 
 /**
  * Create validation error message
  */
-export function createValidationError(field: string, value: any): string {
+export function createValidationError(field: string, value: unknown): string {
   if (field === 'features') {
     return `Invalid features object. Expected object with boolean values for: ${VALID_FEATURES.join(', ')}`;
   }
@@ -93,7 +96,7 @@ export function createValidationError(field: string, value: any): string {
 /**
  * Validate API request body for feature updates
  */
-export function validateFeatureUpdateRequest(body: any): {
+export function validateFeatureUpdateRequest(body: unknown): {
   isValid: boolean;
   features?: Partial<Features>;
   error?: string;
@@ -105,14 +108,15 @@ export function validateFeatureUpdateRequest(body: any): {
     };
   }
 
-  if (!('features' in body)) {
+  if (!body || typeof body !== 'object' || !('features' in body)) {
     return {
       isValid: false,
       error: 'Features object is required in request body'
     };
   }
 
-  const features = body.features;
+  const bodyObj = body as Record<string, unknown>;
+  const features = bodyObj.features;
   
   if (!validateFeatureUpdate(features)) {
     return {

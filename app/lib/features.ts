@@ -9,7 +9,8 @@
 
 import { tenantQuery, tenantQueryMany } from "~/lib/db";
 import { getTenantCache, setTenantCache, deleteTenantCache, CACHE_TTL } from "~/lib/redis";
-import type { Features, FeatureName, TenantFeatures } from "~/types/features";
+import { sanitizeFeatures } from "~/lib/validation";
+import type { Features, FeatureName } from "~/types/features";
 
 // Cache configuration
 const FEATURES_CACHE_KEY = "features";
@@ -57,13 +58,25 @@ export class FeatureService {
     } catch (error) {
       console.error('Failed to get tenant features:', error);
       
-      // Return default features on error for graceful degradation
-      return { ...DEFAULT_FEATURES };
+      // Distinguish between cache and database errors
+      if (error instanceof Error && error.message.includes('database')) {
+        // Database errors should propagate - don't mask system failures
+        throw new Error('Feature system temporarily unavailable');
+      }
+      
+      // Cache errors - try database directly
+      try {
+        console.warn('Cache failed, attempting direct database access');
+        return await this.getFromDatabase(tenantId);
+      } catch (dbError) {
+        console.error('Database also failed, falling back to defaults:', dbError);
+        return { ...DEFAULT_FEATURES };
+      }
     }
   }
 
   /**
-   * Update tenant features with cache invalidation
+   * Update tenant features with atomic cache update
    */
   async updateTenantFeatures(tenantId: string, features: Partial<Features>): Promise<Features> {
     if (!tenantId) {
@@ -75,16 +88,14 @@ export class FeatureService {
     }
 
     try {
-      // Update database for each feature
-      const updates = Object.entries(features).filter(([key, value]) => 
-        VALID_FEATURES.includes(key as FeatureName) && typeof value === 'boolean'
-      );
-
-      if (updates.length === 0) {
+      // Use validation utilities for consistency
+      const sanitizedFeatures = sanitizeFeatures(features);
+      if (Object.keys(sanitizedFeatures).length === 0) {
         throw new Error("No valid features provided");
       }
 
-      for (const [featureName, enabled] of updates) {
+      // Update database for each feature
+      for (const [featureName, enabled] of Object.entries(sanitizedFeatures)) {
         await tenantQuery(tenantId, `
           INSERT INTO tenant_features (tenant_id, feature_name, enabled)
           VALUES ($1, $2, $3)
@@ -93,11 +104,15 @@ export class FeatureService {
         `, [tenantId, featureName, enabled]);
       }
 
-      // Invalidate cache
-      await deleteTenantCache(tenantId, FEATURES_CACHE_KEY);
+      // Fetch updated features directly and update cache atomically
+      const updatedFeatures = await this.getFromDatabase(tenantId);
+      
+      // Update cache with new state (avoids race condition)
+      await setTenantCache(tenantId, FEATURES_CACHE_KEY, updatedFeatures, {
+        ttl: FEATURES_CACHE_TTL
+      });
 
-      // Return updated features
-      return await this.getTenantFeatures(tenantId);
+      return updatedFeatures;
     } catch (error) {
       console.error('Failed to update tenant features:', error);
       throw new Error('Database update failed');
@@ -130,7 +145,8 @@ export class FeatureService {
       return features;
     } catch (error) {
       console.error('Database query failed:', error);
-      throw error;
+      // Wrap error to prevent information leakage
+      throw new Error('Failed to retrieve features from database');
     }
   }
 
