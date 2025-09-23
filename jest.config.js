@@ -7,11 +7,8 @@ export default {
     "**/__tests__/**/*.(ts|tsx|js)",
     "**/*.(test|spec).(ts|tsx|js)",
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     "^~/(.*)$": "<rootDir>/app/$1",
-  },
-  transform: {
-    "^.+\\.(ts|tsx)$": "ts-jest",
   },
   collectCoverageFrom: [
     "app/**/*.{ts,tsx}",
