@@ -46,6 +46,30 @@ export type { NavigationItem } from '~/hooks/useFeatures';
 export { useSidebar } from '~/hooks/useSidebar';
 export type { SidebarState } from '~/hooks/useSidebar';
 
+// Shadcn/ui components
+export { Button, buttonVariants } from '~/components/ui/button';
+export type { ButtonProps } from '~/components/ui/button';
+export { 
+  Card, 
+  CardHeader, 
+  CardFooter, 
+  CardTitle, 
+  CardDescription, 
+  CardContent 
+} from '~/components/ui/card';
+export {
+  Sheet,
+  SheetPortal,
+  SheetOverlay,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+  SheetDescription,
+} from '~/components/ui/sheet';
+
 // =====================================================================================
 // LAYOUT PRESETS
 // =====================================================================================

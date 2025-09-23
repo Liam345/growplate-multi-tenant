@@ -20,6 +20,7 @@ import {
 import { clsx } from 'clsx';
 import type { UserContext } from '~/types/auth';
 import { useFeatures, filterNavigationItems, type NavigationItem } from '~/hooks/useFeatures';
+import { Button } from '~/components/ui/button';
 
 // =====================================================================================
 // TYPES AND INTERFACES
@@ -168,10 +169,11 @@ export function Sidebar({ isOpen, onToggle, user, className }: SidebarProps) {
           )}
           
           {/* Toggle button */}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onToggle}
-            className="p-1 rounded-md text-neutral-600 hover:text-primary-600 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+            className="p-1"
             aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
             {isOpen ? (
@@ -179,7 +181,7 @@ export function Sidebar({ isOpen, onToggle, user, className }: SidebarProps) {
             ) : (
               <ChevronRight className="w-5 h-5" aria-hidden="true" />
             )}
-          </button>
+          </Button>
         </div>
 
         {/* Navigation menu */}

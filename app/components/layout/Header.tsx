@@ -12,6 +12,7 @@ import { clsx } from 'clsx';
 import type { TenantContext } from '~/types/tenant';
 import type { UserContext } from '~/types/auth';
 import { useFeatures, filterNavigationItems, type NavigationItem } from '~/hooks/useFeatures';
+import { Button } from '~/components/ui/button';
 
 // =====================================================================================
 // TYPES AND INTERFACES
@@ -217,9 +218,10 @@ export function Header({
             )}
 
             {/* Mobile menu button */}
-            <button
-              type="button"
-              className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-neutral-600 hover:text-primary-600 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 transition-colors"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
               aria-controls="mobile-menu"
               aria-expanded={isMobileMenuOpen}
               onClick={toggleMobileMenu}
@@ -230,7 +232,7 @@ export function Header({
               ) : (
                 <Menu className="w-6 h-6" aria-hidden="true" />
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

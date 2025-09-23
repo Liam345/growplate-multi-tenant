@@ -15,6 +15,7 @@ import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
 import { FeatureProvider } from '~/hooks/useFeatures';
 import { useSidebar } from '~/hooks/useSidebar';
+import { Card, CardHeader, CardTitle, CardContent } from '~/components/ui/card';
 
 // =====================================================================================
 // TYPES AND INTERFACES
@@ -198,6 +199,7 @@ export function AdminPage({
 
 /**
  * Card component for admin sections
+ * Enhanced with Shadcn/ui Card components for consistency and accessibility
  */
 export function AdminCard({ 
   title, 
@@ -211,25 +213,25 @@ export function AdminCard({
   actions?: ReactNode;
 }) {
   return (
-    <div className={clsx('bg-white rounded-lg border border-neutral-200 shadow-sm', className)}>
+    <Card className={className}>
       {title && (
-        <div className="px-6 py-4 border-b border-neutral-200">
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-neutral-900">
+            <CardTitle className="text-lg font-semibold">
               {title}
-            </h2>
+            </CardTitle>
             {actions && (
               <div className="flex items-center space-x-2">
                 {actions}
               </div>
             )}
           </div>
-        </div>
+        </CardHeader>
       )}
-      <div className="p-6">
+      <CardContent>
         {children}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
