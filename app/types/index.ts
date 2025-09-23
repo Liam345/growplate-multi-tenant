@@ -92,6 +92,27 @@ export interface OrderItem {
 // Re-export feature types for consistency
 export type { FeatureName, Features, FeatureFlag, TenantFeatures } from "./features";
 
+// Re-export authentication types
+export type {
+  Role,
+  JWTPayload,
+  UserContext,
+  AuthContext,
+  LoginRequest,
+  RegisterRequest,
+  UserProfile,
+  AuthResponse,
+  RefreshResponse,
+  AuthError,
+  AuthErrorResponse,
+  AuthenticatedRequest,
+  AuthMiddlewareOptions,
+  UserData,
+  CreateUserData,
+  AuthConfig
+} from "./auth";
+export { AuthErrorCode, isValidRole, isValidJWTPayload, isAuthenticatedRequest } from "./auth";
+
 // API response types
 export interface ApiResponse<T> {
   data?: T;
