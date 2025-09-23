@@ -11,7 +11,7 @@
 export { Header } from './Header';
 export type { HeaderProps } from './Header';
 
-export { Sidebar, useSidebar } from './Sidebar';
+export { Sidebar } from './Sidebar';
 export type { SidebarProps } from './Sidebar';
 
 export { Footer } from './Footer';
@@ -42,6 +42,9 @@ export {
   filterNavigationItems 
 } from '~/hooks/useFeatures';
 export type { NavigationItem } from '~/hooks/useFeatures';
+
+export { useSidebar } from '~/hooks/useSidebar';
+export type { SidebarState } from '~/hooks/useSidebar';
 
 // =====================================================================================
 // LAYOUT PRESETS

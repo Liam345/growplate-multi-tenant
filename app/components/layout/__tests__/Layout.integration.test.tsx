@@ -315,13 +315,18 @@ describe('CustomerLayout Integration', () => {
 // =====================================================================================
 
 describe('Layout Responsive Integration', () => {
-  // Mock window.innerWidth
+  let innerWidthSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    innerWidthSpy = jest.spyOn(window, 'innerWidth', 'get');
+  });
+
+  afterEach(() => {
+    innerWidthSpy.mockRestore();
+  });
+
   const mockInnerWidth = (width: number) => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: width,
-    });
+    innerWidthSpy.mockReturnValue(width);
     window.dispatchEvent(new Event('resize'));
   };
 

@@ -48,9 +48,24 @@ export const Breakpoints = {
 
 /**
  * Check if current screen matches breakpoint
+ * Reactive hook that listens to window resize events
  */
 export function useBreakpoint(breakpoint: keyof typeof Breakpoints): boolean {
-  if (typeof window === 'undefined') return false;
-  
-  return window.innerWidth >= Breakpoints[breakpoint];
+  const [matches, setMatches] = React.useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth >= Breakpoints[breakpoint];
+  });
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleResize = () => {
+      setMatches(window.innerWidth >= Breakpoints[breakpoint]);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [breakpoint]);
+
+  return matches;
 }

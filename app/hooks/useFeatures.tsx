@@ -5,7 +5,7 @@
  * in layout components. Integrates with the existing feature flag system.
  */
 
-import { useContext, createContext, type ReactNode } from 'react';
+import { useContext, createContext, useMemo, useCallback, type ReactNode } from 'react';
 import type { Features, FeatureName } from '~/types/features';
 
 // =====================================================================================
@@ -38,17 +38,17 @@ interface FeatureProviderProps {
  * @param features - Feature flags object from tenant
  */
 export function FeatureProvider({ children, features }: FeatureProviderProps) {
-  const hasFeature = (feature: FeatureName): boolean => {
+  const hasFeature = useCallback((feature: FeatureName): boolean => {
     return features[feature] ?? false;
-  };
+  }, [features]);
 
-  const contextValue: FeatureContextType = {
+  const contextValue: FeatureContextType = useMemo(() => ({
     features,
     hasFeature,
     hasOrders: hasFeature('orders'),
     hasLoyalty: hasFeature('loyalty'),
     hasMenu: hasFeature('menu'),
-  };
+  }), [features, hasFeature]);
 
   return (
     <FeatureContext.Provider value={contextValue}>

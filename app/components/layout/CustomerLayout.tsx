@@ -108,16 +108,17 @@ export function CustomerLayout({
       document.title = `${title} - ${tenantName}`;
     }
 
+    let metaDescription = document.querySelector('meta[name="description"]');
     if (description) {
-      const metaDescription = document.querySelector('meta[name="description"]');
-      if (metaDescription) {
-        metaDescription.setAttribute('content', description);
-      } else {
-        const meta = document.createElement('meta');
-        meta.name = 'description';
-        meta.content = description;
-        document.head.appendChild(meta);
+      if (!metaDescription) {
+        metaDescription = document.createElement('meta');
+        metaDescription.setAttribute('name', 'description');
+        document.head.appendChild(metaDescription);
       }
+      metaDescription.setAttribute('content', description);
+    } else if (metaDescription) {
+      // Remove the tag if description is not provided
+      metaDescription.remove();
     }
   }, [title, description, tenant?.name]);
 

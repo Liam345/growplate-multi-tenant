@@ -259,31 +259,10 @@ export function Sidebar({ isOpen, onToggle, user, className }: SidebarProps) {
 }
 
 // =====================================================================================
-// SIDEBAR HOOK FOR STATE MANAGEMENT
+// SIDEBAR HOOK MOVED TO DEDICATED FILE
 // =====================================================================================
 
-import { useState } from 'react';
-
-/**
- * Custom hook for managing sidebar state
- * 
- * @param initialOpen - Initial sidebar open state
- * @returns Sidebar state and controls
- */
-export function useSidebar(initialOpen: boolean = true) {
-  const [isOpen, setIsOpen] = useState(initialOpen);
-
-  const toggle = () => setIsOpen(!isOpen);
-  const open = () => setIsOpen(true);
-  const close = () => setIsOpen(false);
-
-  return {
-    isOpen,
-    toggle,
-    open,
-    close,
-  };
-}
+// Note: useSidebar hook has been moved to ~/hooks/useSidebar.ts to prevent circular dependencies
 
 // =====================================================================================
 // EXPORTS

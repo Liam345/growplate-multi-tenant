@@ -11,9 +11,10 @@ import type { TenantContext } from '~/types/tenant';
 import type { UserContext } from '~/types/auth';
 import type { Features } from '~/types/features';
 import { Header } from './Header';
-import { Sidebar, useSidebar } from './Sidebar';
+import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
 import { FeatureProvider } from '~/hooks/useFeatures';
+import { useSidebar } from '~/hooks/useSidebar';
 
 // =====================================================================================
 // TYPES AND INTERFACES

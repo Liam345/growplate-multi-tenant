@@ -224,7 +224,7 @@ export function Header({
               aria-expanded={isMobileMenuOpen}
               onClick={toggleMobileMenu}
             >
-              <span className="sr-only">Open main menu</span>
+              <span className="sr-only">{isMobileMenuOpen ? 'Close main menu' : 'Open main menu'}</span>
               {isMobileMenuOpen ? (
                 <X className="w-6 h-6" aria-hidden="true" />
               ) : (
