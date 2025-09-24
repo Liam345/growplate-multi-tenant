@@ -1,141 +1,175 @@
-import type { MetaFunction } from "@remix-run/node";
-import { BarChart3, Menu, ShoppingCart, Users } from "lucide-react";
+/**
+ * Admin Dashboard Route
+ * 
+ * Main admin dashboard page with feature-conditional rendering.
+ * Integrates with AdminLayout and feature flag system.
+ */
 
-export const meta: MetaFunction = () => {
+import type { MetaFunction, LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData, useRouteError } from "@remix-run/react";
+import { AdminLayout } from "~/components/layout/AdminLayout";
+import { Dashboard } from "~/components/admin";
+import type { TenantContext } from "~/types/tenant";
+import type { Features } from "~/types/features";
+
+// =====================================================================================
+// TYPES AND INTERFACES
+// =====================================================================================
+
+interface LoaderData {
+  tenant: Omit<TenantContext, 'createdAt' | 'updatedAt'> & {
+    createdAt: string;
+    updatedAt: string;
+  };
+  features: Features;
+}
+
+// =====================================================================================
+// META FUNCTION
+// =====================================================================================
+
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  const tenantName = data?.tenant?.name || 'GrowPlate';
+  
   return [
-    { title: "Admin Dashboard - GrowPlate" },
+    { title: `Dashboard - ${tenantName} Admin` },
     {
       name: "description",
-      content: "Restaurant admin dashboard for managing orders, menu, and customers.",
+      content: `${tenantName} restaurant admin dashboard for managing orders, menu, and customers.`,
+    },
+    {
+      name: "robots",
+      content: "noindex, nofollow", // Admin pages should not be indexed
     },
   ];
 };
 
-export default function AdminDashboard() {
+// =====================================================================================
+// LOADER FUNCTION
+// =====================================================================================
+
+export const loader: LoaderFunction = async ({ request }) => {
+  // For now, we'll use mock data since tenant resolution middleware
+  // will be implemented in future tasks
+  // In production, this would come from the tenant middleware
+  const mockTenant: LoaderData['tenant'] = {
+    id: "tenant-1",
+    name: "Sample Restaurant",
+    domain: "sample-restaurant.com",
+    subdomain: null,
+    email: "admin@sample-restaurant.com",
+    phone: "(555) 123-4567",
+    address: {
+      street: "123 Main St",
+      city: "Anytown",
+      state: "CA",
+      zipCode: "12345",
+      country: "US",
+    },
+    settings: {},
+    stripeAccountId: null,
+    features: ["orders", "menu"], // Sample enabled features
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const mockFeatures: Features = {
+    orders: true,
+    menu: true,
+    loyalty: false, // Disabled for demonstration
+  };
+
+  return json<LoaderData>({
+    tenant: mockTenant,
+    features: mockFeatures,
+  });
+};
+
+// =====================================================================================
+// ERROR BOUNDARY
+// =====================================================================================
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  
   return (
-    <div className="min-h-screen bg-neutral-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-neutral-900">
-            Restaurant Dashboard
-          </h1>
+    <AdminLayout
+      title="Dashboard Error"
+      features={{ orders: false, menu: false, loyalty: false }}
+    >
+      <div className="text-center py-12">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <svg
+            className="w-8 h-8 text-red-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
+          </svg>
         </div>
-      </header>
+        <h1 className="text-2xl font-bold text-neutral-900 mb-4">
+          Something went wrong
+        </h1>
+        <p className="text-neutral-600 mb-6">
+          We encountered an error loading the dashboard. Please try again later.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        >
+          Reload Page
+        </button>
+      </div>
+    </AdminLayout>
+  );
+}
 
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="card">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ShoppingCart className="h-8 w-8 text-primary-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-neutral-600">
-                  Total Orders
-                </p>
-                <p className="text-2xl font-semibold text-neutral-900">--</p>
-              </div>
-            </div>
-          </div>
+// =====================================================================================
+// MAIN COMPONENT
+// =====================================================================================
 
-          <div className="card">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <BarChart3 className="h-8 w-8 text-secondary-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-neutral-600">
-                  Revenue
-                </p>
-                <p className="text-2xl font-semibold text-neutral-900">--</p>
-              </div>
-            </div>
-          </div>
+/**
+ * AdminDashboard - Main admin dashboard page
+ * 
+ * Features:
+ * - Integration with AdminLayout for consistent structure
+ * - Feature-conditional rendering based on tenant features
+ * - Error boundary for graceful error handling
+ * - SEO-friendly metadata
+ * - Loading states and proper data fetching
+ * 
+ * @returns JSX.Element
+ */
+export default function AdminDashboard() {
+  const { tenant, features } = useLoaderData<LoaderData>();
 
-          <div className="card">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Users className="h-8 w-8 text-primary-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-neutral-600">
-                  Customers
-                </p>
-                <p className="text-2xl font-semibold text-neutral-900">--</p>
-              </div>
-            </div>
-          </div>
+  // Convert serialized dates back to Date objects for AdminLayout
+  const tenantForLayout: TenantContext = {
+    ...tenant,
+    createdAt: new Date(tenant.createdAt),
+    updatedAt: new Date(tenant.updatedAt),
+  };
 
-          <div className="card">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Menu className="h-8 w-8 text-secondary-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-neutral-600">
-                  Menu Items
-                </p>
-                <p className="text-2xl font-semibold text-neutral-900">--</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Feature Placeholders */}
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="card">
-            <h3 className="text-lg font-semibold text-neutral-900 mb-4">
-              Quick Actions
-            </h3>
-            <div className="space-y-3">
-              <button className="btn-primary w-full">
-                Manage Menu Items
-              </button>
-              <button className="btn-secondary w-full">
-                View Recent Orders
-              </button>
-              <button className="btn-outline w-full">
-                Loyalty Settings
-              </button>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="text-lg font-semibold text-neutral-900 mb-4">
-              Recent Activity
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center text-sm text-neutral-600">
-                <div className="h-2 w-2 bg-green-500 rounded-full mr-3"></div>
-                System initialized successfully
-              </div>
-              <div className="flex items-center text-sm text-neutral-600">
-                <div className="h-2 w-2 bg-blue-500 rounded-full mr-3"></div>
-                Database schema ready
-              </div>
-              <div className="flex items-center text-sm text-neutral-600">
-                <div className="h-2 w-2 bg-yellow-500 rounded-full mr-3"></div>
-                Awaiting menu setup
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Development Notice */}
-        <div className="mt-8">
-          <div className="rounded-md bg-blue-50 p-4">
-            <div className="text-sm">
-              <h4 className="font-medium text-blue-800">Development Mode</h4>
-              <p className="mt-1 text-blue-700">
-                This is a placeholder dashboard. Features will be implemented in subsequent tasks.
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+  return (
+    <AdminLayout
+      title="Dashboard"
+      tenant={tenantForLayout}
+      features={features}
+      showSidebar={true}
+      showFooter={true}
+    >
+      <Dashboard 
+        tenant={tenant}
+        loading={false}
+      />
+    </AdminLayout>
   );
 }
