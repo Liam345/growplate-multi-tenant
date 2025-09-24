@@ -151,10 +151,17 @@ export function ErrorBoundary() {
 export default function AdminDashboard() {
   const { tenant, features } = useLoaderData<LoaderData>();
 
+  // Convert serialized dates back to Date objects for AdminLayout
+  const tenantForLayout: TenantContext = {
+    ...tenant,
+    createdAt: new Date(tenant.createdAt),
+    updatedAt: new Date(tenant.updatedAt),
+  };
+
   return (
     <AdminLayout
       title="Dashboard"
-      tenant={tenant as any} // AdminLayout expects TenantContext, but we have serialized version
+      tenant={tenantForLayout}
       features={features}
       showSidebar={true}
       showFooter={true}

@@ -67,14 +67,12 @@ export function FeatureCard({
     return null;
   }
 
-  const isDisabled = disabled;
-
   const cardContent = (
     <Card
       className={clsx(
         'transition-all duration-200 border border-neutral-200',
-        !isDisabled && 'hover:border-primary-300 hover:shadow-md cursor-pointer',
-        isDisabled && 'opacity-50 cursor-not-allowed',
+        !disabled && 'hover:border-primary-300 hover:shadow-md cursor-pointer',
+        disabled && 'opacity-50 cursor-not-allowed',
         'focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2',
         className
       )}
@@ -84,7 +82,7 @@ export function FeatureCard({
           <div
             className={clsx(
               'flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center',
-              !isDisabled
+              !disabled
                 ? 'bg-primary-100 text-primary-600'
                 : 'bg-neutral-100 text-neutral-400'
             )}
@@ -106,15 +104,10 @@ export function FeatureCard({
     </Card>
   );
 
-  // If disabled, render without link
-  if (isDisabled) {
+  // If disabled, render without link and without misleading accessibility attributes
+  if (disabled) {
     return (
-      <div
-        className="block"
-        aria-label={`${title} - Feature disabled`}
-        role="button"
-        tabIndex={-1}
-      >
+      <div className="block">
         {cardContent}
       </div>
     );

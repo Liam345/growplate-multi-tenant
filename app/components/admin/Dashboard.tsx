@@ -5,11 +5,12 @@
  * Displays tenant information and feature cards based on enabled features.
  */
 
-// React import removed as not needed with new JSX transform
-import { ShoppingCart, Menu, Star } from 'lucide-react';
+import { useEffect } from 'react';
 import { clsx } from 'clsx';
 import type { TenantContext } from '~/types/tenant';
 import { useFeatures } from '~/hooks/useFeatures';
+import { trackFeatureCardClick, trackDashboardView } from '~/lib/analytics';
+import { getEnabledFeatures as getEnabledFeatureConfigs } from '~/lib/admin/features';
 import { 
   FeatureCard, 
   FeatureCardGrid, 
@@ -145,7 +146,14 @@ function DashboardLoading() {
  * @returns JSX.Element
  */
 export function Dashboard({ tenant, className, loading = false }: DashboardProps) {
-  const { hasOrders, hasMenu, hasLoyalty } = useFeatures();
+  const { features } = useFeatures();
+  const enabledFeatures = getEnabledFeatureConfigs(features);
+
+  // Track dashboard view for analytics
+  useEffect(() => {
+    const enabledFeatureNames = enabledFeatures.map(feature => feature.key);
+    trackDashboardView(tenant?.id, enabledFeatureNames);
+  }, [tenant?.id, enabledFeatures]);
 
   // Show loading state
   if (loading) {
@@ -153,7 +161,7 @@ export function Dashboard({ tenant, className, loading = false }: DashboardProps
   }
 
   // Check if any features are enabled
-  const hasAnyFeatures = hasOrders || hasMenu || hasLoyalty;
+  const hasAnyFeatures = enabledFeatures.length > 0;
 
   return (
     <div className={clsx('space-y-6', className)}>
@@ -173,44 +181,19 @@ export function Dashboard({ tenant, className, loading = false }: DashboardProps
 
         {hasAnyFeatures ? (
           <FeatureCardGrid>
-            {/* Order Management Card */}
-            <FeatureCard
-              icon={ShoppingCart}
-              title="Order Management"
-              description="Manage incoming orders, track status, and process payments"
-              href="/admin/orders"
-              enabled={hasOrders}
-              onClick={() => {
-                // Analytics tracking could go here
-                console.log('Order Management card clicked');
-              }}
-            />
-
-            {/* Menu Management Card */}
-            <FeatureCard
-              icon={Menu}
-              title="Menu Management"
-              description="Create and manage menu items, categories, and pricing"
-              href="/admin/menu"
-              enabled={hasMenu}
-              onClick={() => {
-                // Analytics tracking could go here
-                console.log('Menu Management card clicked');
-              }}
-            />
-
-            {/* Loyalty System Card */}
-            <FeatureCard
-              icon={Star}
-              title="Loyalty System"
-              description="Configure rewards, view customer points, and manage loyalty programs"
-              href="/admin/loyalty"
-              enabled={hasLoyalty}
-              onClick={() => {
-                // Analytics tracking could go here
-                console.log('Loyalty System card clicked');
-              }}
-            />
+            {enabledFeatures.map((feature) => (
+              <FeatureCard
+                key={feature.key}
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                href={feature.href}
+                enabled={true} // Already filtered by getEnabledFeatures
+                onClick={() => {
+                  trackFeatureCardClick(feature.key, tenant?.id);
+                }}
+              />
+            ))}
           </FeatureCardGrid>
         ) : (
           <FeatureCardEmptyState />
@@ -291,33 +274,23 @@ export function Dashboard({ tenant, className, loading = false }: DashboardProps
 /**
  * Utility function to check if dashboard should show empty state
  * 
- * @param hasOrders - Whether orders feature is enabled
- * @param hasMenu - Whether menu feature is enabled  
- * @param hasLoyalty - Whether loyalty feature is enabled
+ * @param features - Features object with feature flags
  * @returns Boolean indicating if any features are enabled
  */
-export function hasDashboardFeatures(
-  hasOrders: boolean, 
-  hasMenu: boolean, 
-  hasLoyalty: boolean
-): boolean {
-  return hasOrders || hasMenu || hasLoyalty;
+export function hasDashboardFeatures(features: Record<string, boolean>): boolean {
+  const enabledFeatures = getEnabledFeatureConfigs(features);
+  return enabledFeatures.length > 0;
 }
 
 /**
  * Get enabled feature count for analytics
  * 
- * @param hasOrders - Whether orders feature is enabled
- * @param hasMenu - Whether menu feature is enabled
- * @param hasLoyalty - Whether loyalty feature is enabled
+ * @param features - Features object with feature flags
  * @returns Number of enabled features
  */
-export function getEnabledFeatureCount(
-  hasOrders: boolean,
-  hasMenu: boolean, 
-  hasLoyalty: boolean
-): number {
-  return [hasOrders, hasMenu, hasLoyalty].filter(Boolean).length;
+export function getEnabledFeatureCount(features: Record<string, boolean>): number {
+  const enabledFeatures = getEnabledFeatureConfigs(features);
+  return enabledFeatures.length;
 }
 
 // =====================================================================================
